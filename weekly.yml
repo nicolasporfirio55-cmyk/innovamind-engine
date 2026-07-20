@@ -1,0 +1,39 @@
+name: Contenido semanal InnovaMind
+on:
+  schedule:
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+    inputs:
+      brand:
+        description: 'Marca (all/cocheras/hidraulica/distribuidora/inmobiliaria/innova)'
+        default: 'all'
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Desempaquetar engine
+        run: |
+          base64 -d payload.b64 | gunzip > payload.json
+          python -c "import json,os; d=json.load(open('payload.json')); [ (os.makedirs(os.path.dirname(p) or '.',exist_ok=True), open(p,'w',encoding='utf-8').write(c)) for p,c in d.items() ]"
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+      - name: Descargar fuente Poppins
+        run: |
+          mkdir -p fonts
+          for f in Poppins-Bold Poppins-Medium Poppins-Italic Poppins-BoldItalic; do curl -sL -o "fonts/$f.ttf" "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/$f.ttf"; done
+      - name: Generar contenido
+        env:
+          FONT_DIR: ${{ github.workspace }}/fonts
+          PYTHONPATH: ${{ github.workspace }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python -m engine.run --brand "${{ github.event.inputs.brand || 'all' }}" --out output
+      - name: Guardar artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: contenido-semanal
+          path: output/*.zip
+          retention-days: 30
