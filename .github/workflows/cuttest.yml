@@ -1,0 +1,27 @@
+name: Test recorte vino
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Instalar dependencias
+        run: pip install rembg onnxruntime pillow requests
+      - name: Descargar Poppins
+        run: |
+          mkdir -p fonts
+          for f in Poppins-Bold Poppins-Medium; do curl -sL -o "fonts/$f.ttf" "https://raw.githubusercontent.com/google/fonts/main/ofl/poppins/$f.ttf"; done
+      - name: Componer
+        env:
+          FONT_DIR: ${{ github.workspace }}/fonts
+        run: python cutout_test.py
+      - name: Guardar
+        uses: actions/upload-artifact@v4
+        with:
+          name: wine-test
+          path: output/*.jpg
+          retention-days: 7
